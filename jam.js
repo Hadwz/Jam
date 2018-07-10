@@ -27,7 +27,7 @@
 		root.jam = jam; 
 	}
 	//版本号
-	jam.VERSION = '0.1';
+	jam.VERSION = '0.1.0';
 
 	var ArayProto = Array.prototype,
 		push = ArayProto.push,
@@ -117,6 +117,21 @@
 			class2type[Object.prototype.toString.call(obj)] || "object" : //'object' 是在class2type不包含的情况下，它们并不在type对象中
 			typeof obj;
 	};
+
+
+	/**
+	 * 检查对象是否为空（不包含任何属性）。
+	 *
+	 * @param {object} obj 要判断的类型
+	 * @returns
+	 */
+	jam.isEmptyObject = function( obj ) {
+		var name;
+		for ( name in obj ) {
+			return false;
+		}
+		return true;
+	},
 
 	/**
 	 * 判断某个对象是否为用"{}"或"new Object"建立的对象

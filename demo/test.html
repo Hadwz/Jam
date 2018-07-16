@@ -25,10 +25,14 @@
     <script src="../jam.js"></script>
     <script>
         window.onload = function() {
-            var cookieName = 'cookieName'; //chrome无法生成本地cookie
-            jam.setCookie(cookieName, 'hadwz', 1);
-            var value = jam.cookie(cookieName);
-            jam.cookie('das', 'jadwz');
+            // var cookieName = 'cookieName'; //chrome无法生成本地cookie
+            // jam.setCookie(cookieName, 'hadwz', 1);
+            // var value = jam.cookie(cookieName);
+            // jam.cookie('das', 'jadwz');
+
+            // 什么也不传
+            var result = jam.map([{name:'Kevin'}, {name: 'Daisy', age: 18}], {name: 'Daisy'}); // [false, true]
+            console.log(result);
         }
     </script>
     <!-- test debounce -->

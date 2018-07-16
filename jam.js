@@ -30,14 +30,59 @@
 	jam.VERSION = '0.1.0';
 
 	var ArayProto = Array.prototype,
+		nativeIsArray = Array.isArray, 
 		push = ArayProto.push,
+		buildinIteratee = null,
 		//最大数组索引
 		MAX_ARRAY_INDEX = Math.pow(2, 53) - 1,
 		//判断类数组对象
 		isArrayLike = function(collection) {
 			var length = collection.length;
 			return typeof length === 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
+		},
+
+		optimizeCb = function(func, context, argCount) {
+		// 如果没有传入 context，就返回 func 函数
+			if (context === void 0) return func;
+			switch (argCount) {
+			case 1:
+				return function(value) {
+					return func.call(context, value);
+				};
+			case null:
+			case 3:
+				return function(value, index, collection) {
+					return func.call(context, value, index, collection);
+				};
+			case 4:
+				return function(accumulator, value, index, collection) {
+					return func.call(context, accumulator, value, index, collection);
+				};
+			}
+			return function() {
+				return func.apply(context, arguments);
+			};
+		},
+	
+		//获取对象属性
+		shallowProperty = function(key) {
+			return function(obj) {
+				return obj == null ? void 0 : obj[key];
+			};
+		},
+
+		//根据路径取出深层次的值
+		deepGet = function(obj, path) {
+			var length = path.length;
+			for (var i = 0; i < length; i++) {
+				if (obj == null) {
+					return void 0;
+				}
+				obj = obj[path[i]];
+			}
+			return length ? obj : void 0;
 		};
+
 
 	// Collection Functions 集合函数（数组或对象）
 	// --------------------
@@ -66,6 +111,80 @@
 
 		return obj;
 	};
+
+	jam.iteratee = buildinIteratee = function(value, context) {
+		return cb(value, context, Infinity);
+	};
+
+	jam.identity = function(value) {
+		return value;
+	};
+
+	//判断匹配对象值
+	jam.isMatch = function(object, attrs) {
+		var keys = Object.keys(attrs), length = keys.length;
+		if (object == null) return !length;
+		var obj = Object(object);
+		for (var i = 0; i < length; i++) {
+			var key = keys[i];
+			if (attrs[key] !== obj[key] || !(key in obj)) return false;
+		}
+		return true;
+	};
+	//匹配对象值
+	jam.matcher = function(attrs) {
+		attrs = jam.extend({}, attrs);
+		return function(obj) {
+			return jam.isMatch(obj, attrs);
+		};
+	};
+	//返回属性值
+	jam.property = function(path) {
+		// 如果不是数组
+		if (!jam.isArray(path)) {
+			return shallowProperty(path);
+		}
+		return function(obj) {
+			return deepGet(obj, path);
+		};
+	};
+
+	var cb = function(value, context, argCount) {
+		if (jam.iteratee !== buildinIteratee) {
+			return jam.iteratee(value, context);
+		} 
+		//如果没有回调函数，直接返回相同的值
+		if (value == null) {
+			return jam.identity;
+		}
+		//如果有回调函数
+		if (jam.isFunction(value)) {
+			return optimizeCb(value, context, argCount);
+		}
+		//为一个对象，返回元素是否匹配指定的对象。
+		if (jam.isObject(value) && !jam.isArray(value)) {
+			return jam.matcher(value);
+		}
+		//为字符串，返回元素对应的属性值的集合。
+		return jam.property(value);
+	};
+	
+	//通过对list里的每个元素调用转换函数(iteratee迭代器)生成一个与之相对应的数组。
+	//当 iteratee 不传时，返回一个相同的数组。
+	//当 iteratee 为一个函数，正常处理。
+	//当 iteratee 为一个对象，返回元素是否匹配指定的对象。
+	//当 iteratee 为字符串，返回元素对应的属性值的集合。
+	jam.map = function(obj, iteratee, context) {
+		iteratee = cb(iteratee, context);
+		var length = obj.length, results = Array(length);
+
+		for(var index = 0; index < length; index++) {
+			results[index] = iteratee(obj[index], index, obj);
+		}
+
+		return results;
+	};
+
 
 
 
@@ -118,6 +237,11 @@
 			typeof obj;
 	};
 
+	//判断是否为数组
+	jam.isArray = nativeIsArray || function(obj) {
+		return Object.prototype.toString.call(obj) === '[object Array]';
+	};
+
 
 	/**
 	 * 检查对象是否为空（不包含任何属性）。
@@ -131,7 +255,12 @@
 			return false;
 		}
 		return true;
-	},
+	};
+
+	jam.isObject = function(obj) {
+		var type = typeof obj;
+		return type === 'function' || type === 'object' && !!obj;
+	};
 
 	/**
 	 * 判断某个对象是否为用"{}"或"new Object"建立的对象
@@ -497,7 +626,7 @@
 	jam.mixin(jam);
 
 	// 添加所有数组函数到jam中.
-	jam.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+	jam.each([ 'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift' ], function(name) {
 		var method = ArayProto[name];
 		jam.prototype[name] = function() {
 			var obj = this.jam_wrapped;

@@ -33,6 +33,18 @@
             // 什么也不传
             var result = jam.map([{name:'Kevin'}, {name: 'Daisy', age: 18}], {name: 'Daisy'}); // [false, true]
             console.log(result);
+
+            var removeDuplicates = function(nums) {
+                var obj = {}, arr = [];
+                nums.filter(function(item, index, array) {
+                    return obj.hasOwnProperty(typeof item + JSON.stringify(item)) ? false : (obj[typeof item + JSON.stringify(item)] = true);
+                })
+                return nums.length;
+            };
+
+            var arr = [1, 1, 2, 2, 3, 3];
+            arr = jam.unique(arr);
+            console.log(arr);
         }
     </script>
     <!-- test debounce -->

@@ -203,7 +203,7 @@
 	jam.unique = function(array) {
 		var obj = {};
 
-		return array.filters(function(item, index, array) {
+		return array.filter(function(item, index, array) {
 			return obj.hasOwnProperty(typeof item + JSON.stringify(item)) ? false : (obj[typeof item + JSON.stringify(item)] = true);
 		});
 	};

@@ -476,6 +476,28 @@
 		return throttled;
 	};
 
+	/**
+	 * 缓存某函数的计算结果。对于耗时较长的计算是很有帮助的
+	 *
+	 * @param {function} func 要缓存的函数
+	 * @param {function} hasher 将该函数的返回值作为key存储函数运行的结果，它默认使用第一个参数作为key
+	 * @param {object} context this的指向
+	 * @returns
+	 */
+	jam.memoize = function(func, hasher, context) {
+		var memoize = function(key) {
+			context = context || this;
+			var cache = memoize.cache,
+
+			if(!cache[address]) {
+				cache[address] = func.apply(this, arguments);
+			}
+			return cache[address];
+		};
+		memoize.cache = {};
+		return memoize;
+	};
+
 	// Utility 实用功能
 	// --------------------
 

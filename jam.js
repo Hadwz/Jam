@@ -12,8 +12,13 @@
 	//实例对象中，jam_wrapped是传入的值
 	//让它同时支持函数式风格和面向对象的风格调用
 	var jam = function(obj) {
-		if (obj instanceof jam) return obj; //如果原型是jam，则返回
-		if (!(this instanceof jam)) return new jam(obj); //否则调用构造器jam再实例化
+		if (obj instanceof jam) {
+			return obj; //如果原型是jam，则返回
+		}
+		if (!(this instanceof jam)) { //否则调用构造器jam再实例化
+			var instance = new jam(obj);
+			return instance;
+		} 
 		this.jam_wrapped = obj; //封装到特定的属性中便于调用
 	};
 
@@ -45,19 +50,19 @@
 		// 如果没有传入 context，就返回 func 函数
 			if (context === void 0) return func;
 			switch (argCount) {
-			case 1:
-				return function(value) {
-					return func.call(context, value);
-				};
-			case null:
-			case 3:
-				return function(value, index, collection) {
-					return func.call(context, value, index, collection);
-				};
-			case 4:
-				return function(accumulator, value, index, collection) {
-					return func.call(context, accumulator, value, index, collection);
-				};
+				case 1:
+					return function(value) {
+						return func.call(context, value);
+					};
+				case null:
+				case 3:
+					return function(value, index, collection) {
+						return func.call(context, value, index, collection);
+					};
+				case 4:
+					return function(accumulator, value, index, collection) {
+						return func.call(context, accumulator, value, index, collection);
+					};
 			}
 			return function() {
 				return func.apply(context, arguments);
@@ -72,6 +77,7 @@
 		},
 
 		//根据路径取出深层次的值
+		//使用这个函数，可以避免深层次取值时，因为没有其中的一个属性，导致的报错。
 		deepGet = function(obj, path) {
 			var length = path.length;
 			for (var i = 0; i < length; i++) {
@@ -190,8 +196,30 @@
 
 	// Arrays 数组函数
 	// --------------------
-	jam.shuffle = function() {
 
+	/**
+	 * 一个用来创建整数灵活编号的列表的函数，便于each 和 map循环。
+	 * 
+	 * @param {number} start 起始位置，如果忽略start则默认为0
+	 * @param {number} stop 结束位置，如果stop在start前面，也就是stop < start 则会被认为是0长度而不是负增长，如果需要负增长，应该使用负数步长
+	 * @param {number} step 步长用来增加或减少数值，step默认为1
+	 * @returns
+	 */
+	jam.range = function(start, stop, step) {
+		if(stop == null) {
+			stop = start || 0;
+			start = 0;
+		}
+		if(!step) {
+			step = stop < start ? -1 : 1;
+		}
+		var length = Math.max(Math.ceil((stop - start) / step), 0);
+		var range = Array(length);
+
+		for(var index = 0; index < length; index ++, start += step) {
+			range[index] = start;
+		}
+		return range;
 	};
 
 	/**
@@ -203,9 +231,21 @@
 	jam.unique = function(array) {
 		var obj = {};
 
-		return array.filter(function(item, index, array) {
+		return array.filter(function(item) {
 			return obj.hasOwnProperty(typeof item + JSON.stringify(item)) ? false : (obj[typeof item + JSON.stringify(item)] = true);
 		});
+	};
+
+
+	/**
+	 * 判断数组内是否有重复的元素
+	 *
+	 * @param {array} array
+	 * @returns 
+	 */
+	jam.containsDuplicate = function(array) {
+		var set = new Set(array);
+		return set.size != array.length;
 	};
 
 	// Object 对象函数
@@ -264,7 +304,7 @@
 
 	/**
 	 * 判断某个对象是否为用"{}"或"new Object"建立的对象
-	 * 为了跟null，arraydocuments等区分开来，因为这些用typeof 返回的都是object
+	 * 为了跟null，arraydocuments，undefined等区分开来，因为这些用typeof 返回的都是object
 	 * @param {object} obj 要判断的对象
 	 * @returns true/false
 	 * @example console.log(jam.isPlainObject({})) // true
@@ -380,6 +420,15 @@
 	// Functions 与函数有关的函数
 	// --------------------
 
+	//固定函数的一个参数，其功能类似于bind，但是它不改变this的指向
+	jam.partial = function(fun) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		return function() {
+			var newArgs = args.concat(Array.prototype.slice.call(arguments));
+			return fun.apply(this, newArgs);
+		};
+	};
+
 	/**
 	 * 防抖函数
 	 * 将延迟函数的执行（真正执行）在函数最后一次调用时刻的wait毫秒后。 
@@ -488,6 +537,7 @@
 		var memoize = function(key) {
 			context = context || this;
 			var cache = memoize.cache,
+				address = '' + (hasher ? hasher.apply(context, arguments) : key); //key为传入的第一个参数，hasher为hasher函数返回的值
 
 			if(!cache[address]) {
 				cache[address] = func.apply(this, arguments);
@@ -519,7 +569,7 @@
 	 */
 	jam.random = function(min, max) {
 		//如果只有一个参数的情况，就返回0-min之间的随机值
-		if (max === null) {
+		if (max == null) {
 			max = min;
 			min = 0;
 		}
@@ -536,13 +586,13 @@
 	jam.to = function(promise, errorExt) {
 		return promise
 			.then(function (data) {
-				return [null, data];
+				return [ null, data ];
 			})
 			.catch(function (err) {
 				if (errorExt) {
 					Object.assign(err, errorExt);
 				}
-				return [err, undefined];
+				return [ err, undefined ];
 			});
 	};
 
@@ -557,7 +607,6 @@
 		var oDate = new Date();
 		iDay = iDay || 7;
 		oDate.setDate(oDate.getDate() + iDay);
-		console.log('oData', oDate);
 		document.cookie = name + '=' + value + ';expires=' + oDate; 
 	};
 
@@ -616,7 +665,7 @@
 			var func = jam[name] = obj[name]; //将扩展方法也添加到jam函数对象上 
 			jam.prototype[name] = function () {
 				var args = [this.jam_wrapped];
-				push.apply(args, arguments); //push在最上方已定义
+				push.apply(args, arguments); //将wrapped的数据和函数的参数合并到数组中，方便调用
 				//将函数的返回值包裹成可以链式调用的对象
 				return chainResult(this, func.apply(jam, args));
 			};
@@ -663,4 +712,4 @@
 		return this.jam_wrapped;
 	};
 
-})();
+}());

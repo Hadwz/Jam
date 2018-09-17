@@ -1,7 +1,7 @@
 var jam = require('../jam');
 var expect = require('chai').expect;
 
-describe.only('Functions', function() {
+describe('Functions', function() {
 
 	describe('partial()', function() {
 		it('验证this的指向', function() {

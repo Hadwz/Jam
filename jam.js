@@ -688,6 +688,7 @@
 	//将函数的返回值作为参数传入了chainResult，该函数又会返回这样一个对象
 	//函数的返回值就保存在这个对象的jam_wrapped 中，这样就实现了链式调用
 	var chainResult = function(instance, obj) {
+		//jam(obj).chain == jam.chain(obj) 两者的作用是一致的
 		return instance.jam_chain ? jam(obj).chain() : obj;
 	};
 
